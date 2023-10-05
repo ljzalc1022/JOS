@@ -24,6 +24,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Display backtrace of the stack", mon_backtrace},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -34,7 +35,7 @@ mon_help(int argc, char **argv, struct Trapframe *tf)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(commands); i++)
-		cprintf("%s - %s\n", commands[i].name, commands[i].desc);
+		cprintf("\033[33m%s\033[0m - %s\n", commands[i].name, commands[i].desc);
 	return 0;
 }
 
@@ -57,7 +58,30 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+	cprintf("Stack backtrace:\n");
+	uint32_t ebp = read_ebp();
+	while (ebp)
+	{
+		uint32_t eip = *((int *)ebp + 1);
+		cprintf("  \033[31mebp\033[0m %08x  \033[31meip\033[0m %08x  \033[31margs\033[0m", ebp, eip);
+		for (int i = 0; i < 5; i++)
+		{
+			cprintf(" %08x", *((int *)ebp + 2 + i));
+		}
+		cprintf("\n");
+
+		struct Eipdebuginfo info;
+		if(debuginfo_eip(eip, &info) == -1)
+		{
+			cprintf("bad eip");
+			return -1;
+		}
+		cprintf("         \033[32m%s\033[0m:%d: \033[33m%.*s\033[0m+%d\n", info.eip_file, info.eip_line, 
+									  		 info.eip_fn_namelen, info.eip_fn_name, 
+											 eip - info.eip_fn_addr);
+
+		ebp = *(int *)ebp;
+	}
 	return 0;
 }
 
@@ -103,7 +127,7 @@ runcmd(char *buf, struct Trapframe *tf)
 		if (strcmp(argv[0], commands[i].name) == 0)
 			return commands[i].func(argc, argv, tf);
 	}
-	cprintf("Unknown command '%s'\n", argv[0]);
+	cprintf("\033[44;37mUnknown command '%s'\033[0m\n", argv[0]);
 	return 0;
 }
 
@@ -117,7 +141,7 @@ monitor(struct Trapframe *tf)
 
 
 	while (1) {
-		buf = readline("K> ");
+		buf = readline("\033[32mK>\033[0m "); // green prompt
 		if (buf != NULL)
 			if (runcmd(buf, tf) < 0)
 				break;
