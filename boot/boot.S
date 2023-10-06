@@ -21,6 +21,8 @@ start:
   movw    %ax,%es             # -> Extra Segment
   movw    %ax,%ss             # -> Stack Segment
 
+  # The A20 line in particular is used to transmit the 21st bit on the address bus
+
   # Enable A20:
   #   For backwards compatibility with the earliest PCs, physical
   #   address line 20 is tied low, so that addresses higher than
@@ -30,7 +32,7 @@ seta20.1:
   testb   $0x2,%al
   jnz     seta20.1
 
-  movb    $0xd1,%al               # 0xd1 -> port 0x64
+  movb    $0xd1,%al               # Write: 0xd1 -> port 0x64
   outb    %al,$0x64
 
 seta20.2:
@@ -38,8 +40,10 @@ seta20.2:
   testb   $0x2,%al
   jnz     seta20.2
 
-  movb    $0xdf,%al               # 0xdf -> port 0x60
+  movb    $0xdf,%al               # Enable: 0xdf -> port 0x60
   outb    %al,$0x60
+
+  # GDT is a data structur to define the charateristics of various memory areas
 
   # Switch from real to protected mode, using a bootstrap GDT
   # and segment translation that makes virtual addresses 
@@ -53,6 +57,7 @@ seta20.2:
   # Jump to next instruction, but in 32-bit code segment.
   # Switches processor into 32-bit mode.
   ljmp    $PROT_MODE_CSEG, $protcseg
+  # 0x8: jump to the 1-st segment in GDT
 
   .code32                     # Assemble for 32-bit mode
 protcseg:
