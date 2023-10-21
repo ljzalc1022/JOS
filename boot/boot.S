@@ -58,6 +58,8 @@ seta20.2:
   # Switches processor into 32-bit mode.
   ljmp    $PROT_MODE_CSEG, $protcseg
   # 0x8: jump to the 1-st segment in GDT
+  # ljmp is able to clean the pipeline 
+  # which is needed to flush out the 16-bit prefetched instructions
 
   .code32                     # Assemble for 32-bit mode
 protcseg:
@@ -83,6 +85,7 @@ gdt:
   SEG_NULL				# null seg
   SEG(STA_X|STA_R, 0x0, 0xffffffff)	# code seg
   SEG(STA_W, 0x0, 0xffffffff)	        # data seg
+# the difference between default gdt(set by BIOS) and this is that the default length is 0xffff
 
 gdtdesc:
   .word   0x17                            # sizeof(gdt) - 1
