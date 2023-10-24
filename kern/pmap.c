@@ -62,6 +62,7 @@ i386_detect_memory(void)
 // --------------------------------------------------------------
 
 static void boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
+static void boot_map_region_4M(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm);
 static void check_page_free_list(bool only_low_memory);
 static void check_page_alloc(void);
 static void check_kern_pgdir(void);
@@ -109,6 +110,25 @@ boot_alloc(uint32_t n)
 		panic("out of memory");
 	}
 	return result;
+}
+
+bool SetPSE()
+{
+	unsigned int edx;
+    __asm__	__volatile__ (
+		"mov $1, %%eax\n\t"
+		"cpuid\n\t"
+		"mov %%edx, %0" : "=q" (edx) : : "%eax", "%edx");
+	if (~edx & (1 << 3))
+	{
+		return false;
+	}
+	__asm__ __volatile__ (
+		"mov %%cr4, %%eax\n\t"
+		"xor $16, %%eax\n\t"
+		"mov %%eax, %%cr4" : : : "%eax");
+	tlbflush();
+	return true;
 }
 
 // Set up a two-level page table:
@@ -202,7 +222,14 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir, KERNBASE, (1ll << 32) - KERNBASE, 0, PTE_W);
+	if (!SetPSE())
+	{
+		boot_map_region(kern_pgdir, KERNBASE, (1ll << 32) - KERNBASE, 0, PTE_W);
+	}
+	else 
+	{
+		boot_map_region_4M(kern_pgdir, KERNBASE, (1ll << 32) - KERNBASE, 0, PTE_W);
+	}
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -407,7 +434,20 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		{
 			panic("out of space");
 		}
+		tlb_invalidate(pgdir, (void *)(va + i));
 		*pte = (pa + i) | perm | PTE_P; 
+	}
+}
+
+static void
+boot_map_region_4M(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
+{
+	assert(va % (PGSIZE << 10) == 0);
+	assert(size % (PGSIZE << 10) == 0);
+	for (size_t i = 0; i < size; i += (PGSIZE << 10))
+	{
+		tlb_invalidate(pgdir, (void *)(va + i));
+		pgdir[PDX(va + i)] = (pa + i) | perm | PTE_P | PTE_PS; 
 	}
 }
 
@@ -728,6 +768,10 @@ check_va2pa(pde_t *pgdir, uintptr_t va)
 	pgdir = &pgdir[PDX(va)];
 	if (!(*pgdir & PTE_P))
 		return ~0;
+	if (*pgdir & PTE_PS)
+	{
+		return PTE_ADDR(*pgdir) + (PTX(va) << 12);
+	}
 	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
 	if (!(p[PTX(va)] & PTE_P))
 		return ~0;
