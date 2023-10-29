@@ -58,6 +58,24 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
+void ENTRY_DIVIDE();
+void ENTRY_DEBUG();
+void ENTRY_NMI();
+void ENTRY_BRKPT();
+void ENTRY_OFLOW();
+void ENTRY_BOUND();
+void ENTRY_ILLOP();
+void ENTRY_DEVICE();
+void ENTRY_DBLFLT();
+void ENTRY_TSS();
+void ENTRY_SEGNP();
+void ENTRY_STACK();
+void ENTRY_GPFLT();
+void ENTRY_PGFLT();
+void ENTRY_FPERR();
+void ENTRY_ALIGN();
+void ENTRY_MCHK();
+void ENTRY_SIMDERR();
 
 void
 trap_init(void)
@@ -65,6 +83,24 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+	SETGATE(idt[T_DIVIDE], 0, GD_KT, &ENTRY_DIVIDE, 0);
+	SETGATE(idt[T_DEBUG], 0, GD_KT, &ENTRY_DEBUG, 0); // #DB can be either a trap or a fault
+	SETGATE(idt[T_NMI], 0, GD_KT, &ENTRY_NMI, 0); // exception class is not applicable for NMI
+	SETGATE(idt[T_BRKPT], 1, GD_KT, &ENTRY_BRKPT, 0);
+	SETGATE(idt[T_OFLOW], 1, GD_KT, &ENTRY_OFLOW, 0);
+	SETGATE(idt[T_BOUND], 0, GD_KT, &ENTRY_BOUND, 0);
+	SETGATE(idt[T_ILLOP], 0, GD_KT, &ENTRY_ILLOP, 0);
+	SETGATE(idt[T_DEVICE], 0, GD_KT, &ENTRY_DEVICE, 0);
+	SETGATE(idt[T_DBLFLT], 0, GD_KT, &ENTRY_DBLFLT, 0); // abort
+	SETGATE(idt[T_TSS], 0, GD_KT, &ENTRY_TSS, 0);
+	SETGATE(idt[T_SEGNP], 0, GD_KT, &ENTRY_SEGNP, 0);
+	SETGATE(idt[T_STACK], 0, GD_KT, &ENTRY_STACK, 0);
+	SETGATE(idt[T_GPFLT], 0, GD_KT, &ENTRY_GPFLT, 0);
+	SETGATE(idt[T_PGFLT], 0, GD_KT, &ENTRY_PGFLT, 0);
+	SETGATE(idt[T_FPERR], 0, GD_KT, &ENTRY_FPERR, 0);
+	SETGATE(idt[T_ALIGN], 0, GD_KT, &ENTRY_ALIGN, 0);
+	SETGATE(idt[T_MCHK], 0, GD_KT, &ENTRY_MCHK, 0); // abort
+	SETGATE(idt[T_SIMDERR], 0, GD_KT, &ENTRY_SIMDERR, 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -144,6 +180,11 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	if (tf->tf_trapno == T_PGFLT)
+	{
+		page_fault_handler(tf);
+		return;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -205,6 +246,12 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	uint16_t cs = rcs();
+	if (cs == GD_KT)
+	{
+		struct PageInfo *p = page_alloc(0);
+		page_insert(kern_pgdir, p, (void *)fault_va, PTE_W);
+	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
