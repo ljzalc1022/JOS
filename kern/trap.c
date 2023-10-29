@@ -246,10 +246,11 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-	uint16_t cs = rcs();
+	uint16_t cs = rcs(); // some assembly code to read cs
 	if (cs == GD_KT)
 	{
 		struct PageInfo *p = page_alloc(0);
+		// permit the new page to be written since we don't typically allocate new page to code
 		page_insert(kern_pgdir, p, (void *)fault_va, PTE_W);
 	}
 
