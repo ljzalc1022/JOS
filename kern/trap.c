@@ -77,6 +77,8 @@ void ENTRY_ALIGN();
 void ENTRY_MCHK();
 void ENTRY_SIMDERR();
 
+void ENTRY_SYSCALL();
+
 void
 trap_init(void)
 {
@@ -86,7 +88,7 @@ trap_init(void)
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, &ENTRY_DIVIDE, 0);
 	SETGATE(idt[T_DEBUG], 0, GD_KT, &ENTRY_DEBUG, 0); // #DB can be either a trap or a fault
 	SETGATE(idt[T_NMI], 0, GD_KT, &ENTRY_NMI, 0); // exception class is not applicable for NMI
-	SETGATE(idt[T_BRKPT], 1, GD_KT, &ENTRY_BRKPT, 0);
+	SETGATE(idt[T_BRKPT], 1, GD_KT, &ENTRY_BRKPT, 3);
 	SETGATE(idt[T_OFLOW], 1, GD_KT, &ENTRY_OFLOW, 0);
 	SETGATE(idt[T_BOUND], 0, GD_KT, &ENTRY_BOUND, 0);
 	SETGATE(idt[T_ILLOP], 0, GD_KT, &ENTRY_ILLOP, 0);
@@ -101,6 +103,8 @@ trap_init(void)
 	SETGATE(idt[T_ALIGN], 0, GD_KT, &ENTRY_ALIGN, 0);
 	SETGATE(idt[T_MCHK], 0, GD_KT, &ENTRY_MCHK, 0); // abort
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, &ENTRY_SIMDERR, 0);
+
+	SETGATE(idt[T_SYSCALL], 1, GD_KT, &ENTRY_SYSCALL, 3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -183,6 +187,25 @@ trap_dispatch(struct Trapframe *tf)
 	if (tf->tf_trapno == T_PGFLT)
 	{
 		page_fault_handler(tf);
+		return;
+	}
+
+	if (tf->tf_trapno == T_BRKPT)
+	{
+		monitor(tf);
+		return;
+	}
+
+	if (tf->tf_trapno == T_SYSCALL)
+	{
+		int retval = syscall(tf->tf_regs.reg_eax, 
+							 tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx, 
+							 tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+		if (retval < 0)
+		{
+			panic("trap_dispatch: %e", retval);
+		}
+		tf->tf_regs.reg_eax = retval;
 		return;
 	}
 
