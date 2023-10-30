@@ -279,18 +279,25 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+	int retval;
 	uintptr_t L = (uintptr_t)ROUNDDOWN(va, PGSIZE);
 	uintptr_t R = (uintptr_t)ROUNDUP(va + len, PGSIZE);
 	for (uintptr_t i = L; i < R; i += PGSIZE)
 	{
+		pte_t* pte = pgdir_walk(e->env_pgdir, (void *)i, false);
+		if (pte != NULL && (*pte & PTE_P))
+		{
+			continue;
+		}
 		struct PageInfo *p = page_alloc(0);
 		if (p == NULL)
 		{
-			panic("out of space");
+			panic("region_alloc: page_alloc failed");
 		}
-		if (page_insert(e->env_pgdir, p, (void *)i, PTE_U | PTE_W))
+		retval = page_insert(e->env_pgdir, p, (void *)i, PTE_U | PTE_W);
+		if (retval)
 		{
-			panic("page insert failed");
+			panic("region_alloc: %e", retval);
 		}
 	}
 }
@@ -515,6 +522,7 @@ env_run(struct Env *e)
 		{
 			curenv->env_status = ENV_RUNNABLE;
 		}
+		// seems we don't have to save the content yet.
 	}
 	curenv = e;
 	e->env_status = ENV_RUNNING;

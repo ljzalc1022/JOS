@@ -250,8 +250,16 @@ page_fault_handler(struct Trapframe *tf)
 	if (cs == GD_KT)
 	{
 		struct PageInfo *p = page_alloc(0);
+		if (p == NULL)
+		{
+			panic("page_fault_handler: page_alloc failed");
+		}
 		// permit the new page to be written since we don't typically allocate new page to code
-		page_insert(kern_pgdir, p, (void *)fault_va, PTE_W);
+		int retval = page_insert(kern_pgdir, p, (void *)fault_va, PTE_W);
+		if (retval)
+		{
+			panic("page_fault_handler: %e", retval);
+		}
 	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
