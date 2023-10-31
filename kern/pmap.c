@@ -595,10 +595,41 @@ static uintptr_t user_mem_check_addr;
 // Returns 0 if the user program can access this range of addresses,
 // and -E_FAULT otherwise.
 //
+static bool user_mem_check_page(struct Env *env, uintptr_t va, int perm)
+{
+	if (va >= ULIM) return false; // kernel space
+	pte_t *pte = pgdir_walk(env->env_pgdir, (void *)va, false);
+	if (pte == NULL || ~(*pte) & PTE_P)
+	{
+		return false; // PTE not present
+	}
+	return ((*pte) & perm) == perm;
+}
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	uintptr_t L = (uintptr_t)va;
+	uintptr_t R = L + len;
+
+	// check the first page
+	if (!user_mem_check_page(env, L, perm))
+	{
+		user_mem_check_addr = L;
+		return -E_FAULT;
+	}
+
+	// check the rest pages
+	uintptr_t i = L % PGSIZE == 0 ? L + PGSIZE : ROUNDUP(L, PGSIZE);
+	while (i < R)
+	{
+		if (!user_mem_check_page(env, i, perm))
+		{
+			user_mem_check_addr = i;
+			return -E_FAULT;
+		}
+		i += PGSIZE;
+	}
 
 	return 0;
 }

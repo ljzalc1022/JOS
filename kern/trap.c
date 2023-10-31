@@ -270,8 +270,12 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
 	uint16_t cs = rcs(); // some assembly code to read cs
-	if (cs == GD_KT)
+	if (!(cs & 3))
 	{
+		if (!(tf->tf_cs & 3))
+		{
+			panic("page fault in the kernel");
+		}
 		struct PageInfo *p = page_alloc(0);
 		if (p == NULL)
 		{
