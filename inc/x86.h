@@ -185,14 +185,6 @@ rcr4(void)
 	return cr4;
 }
 
-static inline uint16_t 
-rcs(void)
-{
-	uint16_t cs;
-	asm volatile("movw %%cs, %0" : "=r" (cs));
-	return cs;
-}
-
 static inline void
 tlbflush(void)
 {

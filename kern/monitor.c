@@ -26,6 +26,8 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Display backtrace of the stack", mon_backtrace},
+	{ "continue", "Continue execution of current environment", mon_continue },
+	{ "si", "single step", mon_si},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -86,7 +88,19 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int 
+mon_continue(int argc, char **argv, struct Trapframe *tf)
+{
+	tf->tf_eflags &= ~FL_TF;
+	return -1;
+}
 
+int 
+mon_si(int argc, char **argv, struct Trapframe *tf)
+{
+	tf->tf_eflags |= FL_TF;
+	return -1;
+}
 
 /***** Kernel monitor command interpreter *****/
 
