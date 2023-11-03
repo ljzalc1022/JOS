@@ -14,6 +14,7 @@ static void cons_intr(int (*proc)(void));
 static void cons_putc(int c);
 
 // Stupid I/O delay routine necessitated by historical PC design flaws
+// CPU can't send request faster than the speed at which the IO device could process
 static void
 delay(void)
 {
@@ -25,6 +26,7 @@ delay(void)
 
 /***** Serial I/O code *****/
 
+// serial port
 #define COM1		0x3F8
 
 #define COM_RX		0	// In:	Receive buffer (DLAB=0)
@@ -85,7 +87,8 @@ serial_init(void)
 
 	// Set speed; requires DLAB latch
 	outb(COM1+COM_LCR, COM_LCR_DLAB);
-	outb(COM1+COM_DLL, (uint8_t) (115200 / 9600));
+	// two registers become available from which you can set your speed of communications measured in bits per second.
+	outb(COM1+COM_DLL, (uint8_t) (115200 / 9600)); // 12
 	outb(COM1+COM_DLM, 0);
 
 	// 8 data bits, 1 stop bit, parity off; turn off DLAB latch
@@ -126,10 +129,12 @@ lpt_putc(int c)
 
 
 /***** Text-mode CGA/VGA display output *****/
+// CGA: color/graphic adapter
 
-static unsigned addr_6845;
-static uint16_t *crt_buf;
+static unsigned addr_6845; // MC6845
+static uint16_t *crt_buf; 
 static uint16_t crt_pos;
+// CRT: cathode-ray tube
 
 static void
 cga_init(void)
@@ -194,6 +199,7 @@ cga_putc(int c)
 	}
 
 	// What is the purpose of this?
+	// a newline filled with black ' '
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
@@ -330,13 +336,14 @@ kbd_proc_data(void)
 
 	data = inb(KBDATAP);
 
+	// extended ASCII
 	if (data == 0xE0) {
 		// E0 escape character
 		shift |= E0ESC;
 		return 0;
 	} else if (data & 0x80) {
 		// Key released
-		data = (shift & E0ESC ? data : data & 0x7F);
+		data = (shift & E0ESC ? data : data & 0x7F); // escape sequence?
 		shift &= ~(shiftcode[data] | E0ESC);
 		return 0;
 	} else if (shift & E0ESC) {
@@ -361,6 +368,7 @@ kbd_proc_data(void)
 	if (!(~shift & (CTL | ALT)) && c == KEY_DEL) {
 		cprintf("Rebooting!\n");
 		outb(0x92, 0x3); // courtesy of Chris Frost
+		// 0x92: PS/2 system control port A
 	}
 
 	return c;
@@ -437,6 +445,92 @@ cons_getc(void)
 static void
 cons_putc(int c)
 {
+	static int color = 0;
+	// lower byte: foreground color
+	// higher byte: background color
+	// 0-th bit: blue
+	// 1-st bit: green
+	// 2-nd bit: red
+	// 3-rd bit: bright
+
+	static int escState = 0, P[3]; // escape sequence status
+	// 0: normal
+	// 1: ESC
+	// 2: ESC[ 
+	// 3: ESC[P1;
+	// 4: ESC[P1;P2;
+	if (c == '\033') // ESC
+	{
+		if (escState == 0)
+		{
+			escState = 1;
+			memset(P, 0, sizeof(P));
+		}
+		// ignore extra ESC
+		return;
+	}
+	if (c == '[')
+	{
+		if(escState == 1)
+		{
+			escState = 2;
+			return;
+		}
+		// invalid [ terminates the escape sequence
+		escState = 0;
+	}
+	if (escState >= 2)
+	{
+		if (c >= '0' && c <= '9') // parameter
+		{
+			P[escState - 2] = P[escState - 2] * 10 + c - '0';
+			return;
+		}
+		else if (c == ';')
+		{
+			if (++escState > 4)
+			{
+				// too many parameters
+				escState = 0;
+			}
+			else
+			{
+				return;
+			}
+		}
+		else 
+		{
+			switch (c)
+			{
+			case 'm': // set graphics mode
+				color = 0;
+				for (int i = 0; i <= escState - 2; i++)
+				{
+					if (P[i] >= 0 && P[i] <= 8)
+					{
+						// Text attributes are not supported
+					}
+					else if (P[i] >= 30 && P[i] <= 37) // Foreground colors
+					{
+						color |= P[i] - 30;
+					}
+					else if (P[i] >= 40 && P[i] <= 47) // Background colors
+					{
+						color |= (P[i] - 40) << 4;
+					}
+				}
+				escState = 0;
+				return;
+			
+			default:
+				// unsupported command
+				escState = 0;
+				break;
+			}
+		}
+	}
+	if (!(c & ~0xff)) c |= color << 8;
+
 	serial_putc(c);
 	lpt_putc(c);
 	cga_putc(c);
