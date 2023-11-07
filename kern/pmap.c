@@ -347,7 +347,7 @@ page_init(void)
 	// free pages!
 	size_t i;
 	for (i = 1; i < npages; i++) {
-		if (i == PGNUM(MPENTRY_PADDR))
+		if (i == PGNUM(MPENTRY_PADDR)) // reserved for AP start code
 			continue;
 
 		if (i >= IOPHYSMEM / PGSIZE && i < EXTPHYSMEM / PGSIZE)
