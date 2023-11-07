@@ -230,6 +230,7 @@ mem_init(void)
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
 	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
+	// bootstack is used at booting now
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -239,14 +240,14 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-	if (!SetPSE())
-	{
+	// if (!SetPSE())
+	// {
 		boot_map_region(kern_pgdir, KERNBASE, (1ll << 32) - KERNBASE, 0, PTE_W);
-	}
-	else 
-	{
-		boot_map_region_4M(kern_pgdir, KERNBASE, (1ll << 32) - KERNBASE, 0, PTE_W);
-	}
+	// }
+	// else 
+	// {
+	// 	boot_map_region_4M(kern_pgdir, KERNBASE, (1ll << 32) - KERNBASE, 0, PTE_W);
+	// }
 
 	// Initialize the SMP-related parts of the memory map
 	mem_init_mp();
@@ -298,7 +299,12 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
-
+	for (int i = 0; i < NCPU; i++)
+	{
+		intptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE, 
+						PADDR(percpu_kstacks[i]), PTE_W);
+	}
 }
 
 // --------------------------------------------------------------
@@ -341,6 +347,9 @@ page_init(void)
 	// free pages!
 	size_t i;
 	for (i = 1; i < npages; i++) {
+		if (i == PGNUM(MPENTRY_PADDR))
+			continue;
+
 		if (i >= IOPHYSMEM / PGSIZE && i < EXTPHYSMEM / PGSIZE)
 			continue;
 		if (i >= EXTPHYSMEM / PGSIZE && (uintptr_t)KADDR(i * PGSIZE) < (uintptr_t)(envs + NENV))
@@ -641,7 +650,16 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	// panic("mmio_map_region not implemented");
+	size = ROUNDUP(size, PGSIZE);
+	if (base + size > MMIOLIM)
+	{
+		panic("mmio_map_region: exceed MMIOLIM");
+	}
+	boot_map_region(kern_pgdir, base, size, pa, PTE_W | PTE_PCD | PTE_PWT);
+	void * re = (void *)base;
+	base += size;
+	return re;
 }
 
 static uintptr_t user_mem_check_addr;

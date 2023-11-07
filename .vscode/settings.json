@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "monitor.h": "c"
+        "monitor.h": "c",
+        "env.h": "c",
+        "cpu.h": "c"
     }
 }
