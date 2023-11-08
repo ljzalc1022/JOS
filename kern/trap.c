@@ -162,6 +162,8 @@ trap_init_percpu(void)
 	ltr(GD_TSS0 + (i << 3));
 
 	lidt(&idt_pd);
+	
+	return;
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
@@ -308,6 +310,7 @@ trap(struct Trapframe *tf)
 		// serious kernel work.
 		// LAB 4: Your code here.
 		assert(curenv);
+		lock_kernel();
 
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
@@ -354,7 +357,8 @@ page_fault_handler(struct Trapframe *tf)
 	// LAB 3: Your code here.
 	if (!(tf->tf_cs & 3))
 	{
-		panic("page fault in the kernel");
+		print_trapframe(tf);
+		panic("page fault in the kernel: %x", fault_va);
 	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,
