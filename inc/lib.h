@@ -55,6 +55,7 @@ int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
 
 // This must be inlined.  Exercise for reader: why?
+// to prevent the return value in %eax from being overriden
 static inline envid_t __attribute__((always_inline))
 sys_exofork(void)
 {
