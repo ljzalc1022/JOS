@@ -135,23 +135,23 @@ trap_init(void)
 
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, &ENTRY_SYSCALL, 3);
 
-		// set up IDT entries for IRQ 0 ~ 15 
-		SETGATE(idt[IRQ_OFFSET + 0], 0, GD_KT, &ENTRY_IRQ0, 0);
-		SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, &ENTRY_IRQ1, 0);
-		SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, &ENTRY_IRQ2, 0);
-		SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, &ENTRY_IRQ3, 0);
-		SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, &ENTRY_IRQ4, 0);
-		SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, &ENTRY_IRQ5, 0);
-		SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, &ENTRY_IRQ6, 0);
-		SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, &ENTRY_IRQ7, 0);
-		SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, &ENTRY_IRQ8, 0);
-		SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, &ENTRY_IRQ9, 0);
-		SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, &ENTRY_IRQ10, 0);
-		SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, &ENTRY_IRQ11, 0);
-		SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, &ENTRY_IRQ12, 0);
-		SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, &ENTRY_IRQ13, 0);
-		SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, &ENTRY_IRQ14, 0);
-		SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, &ENTRY_IRQ15, 0);
+	// set up IDT entries for IRQ 0 ~ 15 
+	SETGATE(idt[IRQ_OFFSET + 0], 0, GD_KT, &ENTRY_IRQ0, 0);
+	SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, &ENTRY_IRQ1, 0);
+	SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, &ENTRY_IRQ2, 0);
+	SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, &ENTRY_IRQ3, 0);
+	SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, &ENTRY_IRQ4, 0);
+	SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, &ENTRY_IRQ5, 0);
+	SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, &ENTRY_IRQ6, 0);
+	SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, &ENTRY_IRQ7, 0);
+	SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, &ENTRY_IRQ8, 0);
+	SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, &ENTRY_IRQ9, 0);
+	SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, &ENTRY_IRQ10, 0);
+	SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, &ENTRY_IRQ11, 0);
+	SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, &ENTRY_IRQ12, 0);
+	SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, &ENTRY_IRQ13, 0);
+	SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, &ENTRY_IRQ14, 0);
+	SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, &ENTRY_IRQ15, 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -290,6 +290,12 @@ trap_dispatch(struct Trapframe *tf)
 							 tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
 		tf->tf_regs.reg_eax = retval;
 		return;
+	}
+
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER)
+	{
+		lapic_eoi();
+		sched_yield();
 	}
 
 	// Handle spurious interrupts

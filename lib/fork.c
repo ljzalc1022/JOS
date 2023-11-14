@@ -136,6 +136,13 @@ fork(void)
 		panic("fork: %e", child);
 	}
 
+	// I'm the child
+	if (child == 0) 
+	{
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return child;
+	}
+
 	for (int i = 0; i <= PDX(USTACKTOP); i++)
 	{
 		pde_t *pde = PGADDR(PDX(UVPT), PDX(UVPT), (i << 2));
