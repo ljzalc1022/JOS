@@ -65,26 +65,44 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
-void ENTRY_DIVIDE();
-void ENTRY_DEBUG();
-void ENTRY_NMI();
-void ENTRY_BRKPT();
-void ENTRY_OFLOW();
-void ENTRY_BOUND();
-void ENTRY_ILLOP();
-void ENTRY_DEVICE();
-void ENTRY_DBLFLT();
-void ENTRY_TSS();
-void ENTRY_SEGNP();
-void ENTRY_STACK();
-void ENTRY_GPFLT();
-void ENTRY_PGFLT();
-void ENTRY_FPERR();
-void ENTRY_ALIGN();
-void ENTRY_MCHK();
-void ENTRY_SIMDERR();
+extern void ENTRY_DIVIDE();
+extern void ENTRY_DEBUG();
+extern void ENTRY_NMI();
+extern void ENTRY_BRKPT();
+extern void ENTRY_OFLOW();
+extern void ENTRY_BOUND();
+extern void ENTRY_ILLOP();
+extern void ENTRY_DEVICE();
+extern void ENTRY_DBLFLT();
+extern void ENTRY_TSS();
+extern void ENTRY_SEGNP();
+extern void ENTRY_STACK();
+extern void ENTRY_GPFLT();
+extern void ENTRY_PGFLT();
+extern void ENTRY_FPERR();
+extern void ENTRY_ALIGN();
+extern void ENTRY_MCHK();
+extern void ENTRY_SIMDERR();
 
-void ENTRY_SYSCALL();
+extern void ENTRY_SYSCALL();
+
+// entry point for IRQ 0 ~ 15
+extern void ENTRY_IRQ0();
+extern void ENTRY_IRQ1();
+extern void ENTRY_IRQ2();
+extern void ENTRY_IRQ3();
+extern void ENTRY_IRQ4();
+extern void ENTRY_IRQ5();
+extern void ENTRY_IRQ6();
+extern void ENTRY_IRQ7();
+extern void ENTRY_IRQ8();
+extern void ENTRY_IRQ9();
+extern void ENTRY_IRQ10();
+extern void ENTRY_IRQ11();
+extern void ENTRY_IRQ12();
+extern void ENTRY_IRQ13();
+extern void ENTRY_IRQ14();
+extern void ENTRY_IRQ15();
 
 void
 trap_init(void)
@@ -93,14 +111,14 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, &ENTRY_DIVIDE, 0);
-	SETGATE(idt[T_DEBUG], 1, GD_KT, &ENTRY_DEBUG, 0); 
+	SETGATE(idt[T_DEBUG], 0, GD_KT, &ENTRY_DEBUG, 0); 
 	// debug exception is preferred to be handled by a task
 	// "Instruction address breakpoint conditions are faults, 
 	//  while other debug conditions are traps."
 	// set it to be trap here for simplicity
 	SETGATE(idt[T_NMI], 0, GD_KT, &ENTRY_NMI, 0); // exception class is not applicable for NMI
-	SETGATE(idt[T_BRKPT], 1, GD_KT, &ENTRY_BRKPT, 3);
-	SETGATE(idt[T_OFLOW], 1, GD_KT, &ENTRY_OFLOW, 0);
+	SETGATE(idt[T_BRKPT], 0, GD_KT, &ENTRY_BRKPT, 3);
+	SETGATE(idt[T_OFLOW], 0, GD_KT, &ENTRY_OFLOW, 0);
 	SETGATE(idt[T_BOUND], 0, GD_KT, &ENTRY_BOUND, 0);
 	SETGATE(idt[T_ILLOP], 0, GD_KT, &ENTRY_ILLOP, 0);
 	SETGATE(idt[T_DEVICE], 0, GD_KT, &ENTRY_DEVICE, 0);
@@ -115,7 +133,25 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, &ENTRY_MCHK, 0); // abort
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, &ENTRY_SIMDERR, 0);
 
-	SETGATE(idt[T_SYSCALL], 1, GD_KT, &ENTRY_SYSCALL, 3);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, &ENTRY_SYSCALL, 3);
+
+		// set up IDT entries for IRQ 0 ~ 15 
+		SETGATE(idt[IRQ_OFFSET + 0], 0, GD_KT, &ENTRY_IRQ0, 0);
+		SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, &ENTRY_IRQ1, 0);
+		SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, &ENTRY_IRQ2, 0);
+		SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, &ENTRY_IRQ3, 0);
+		SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, &ENTRY_IRQ4, 0);
+		SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, &ENTRY_IRQ5, 0);
+		SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, &ENTRY_IRQ6, 0);
+		SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, &ENTRY_IRQ7, 0);
+		SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, &ENTRY_IRQ8, 0);
+		SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, &ENTRY_IRQ9, 0);
+		SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, &ENTRY_IRQ10, 0);
+		SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, &ENTRY_IRQ11, 0);
+		SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, &ENTRY_IRQ12, 0);
+		SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, &ENTRY_IRQ13, 0);
+		SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, &ENTRY_IRQ14, 0);
+		SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, &ENTRY_IRQ15, 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
