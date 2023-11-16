@@ -65,6 +65,9 @@ struct Env {
 	uint32_t env_ipc_value;		// Data value sent to us
 	envid_t env_ipc_from;		// envid of the sender
 	int env_ipc_perm;		// Perm of page mapping received
+
+	struct Env *env_ipc_queue; // the head of IPC waiting queue (this is receiver)
+	struct Env *env_ipc_next; // next waiting environment in the same waiting queue (this is sender)
 };
 
 #endif // !JOS_INC_ENV_H

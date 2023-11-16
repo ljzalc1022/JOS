@@ -56,22 +56,11 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 
 	// an address >= UTOP means no receiving page in sys_ipc_recv()
 	pg = pg == NULL ? (void *)UTOP : pg;
-	do 
+	r = sys_ipc_try_send(to_env, val, pg, perm);
+	if (r)
 	{
-		r = sys_ipc_try_send(to_env, val, pg, perm);
-		if (r)
-		{
-			if (r != -E_IPC_NOT_RECV)
-			{
-				panic("ipc_send: %e", r);
-			}
-			else 
-			{
-				sys_yield();
-			}
-		}
-	} 
-	while(r);
+		panic("ipc_send: %e", r);
+	}
 
 	// panic("ipc_send not implemented");
 }
