@@ -376,7 +376,65 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	struct Env* e;
+	int r;
+
+	if ((r = envid2env(envid, &e, false)))
+	{
+		return r;
+	}
+
+	if(!e->env_ipc_recving)
+	{
+		return -E_IPC_NOT_RECV;
+	}
+
+	// only tries to transfer a page when they're both willing
+	if ((intptr_t)(srcva) < UTOP && (intptr_t)(e->env_ipc_dstva) < UTOP)
+	{
+		if ((intptr_t)(srcva) % PGSIZE)
+		{
+			return -E_INVAL;
+		}
+		if ((~perm & PTE_P) || (~perm & PTE_U) || (perm & ~PTE_SYSCALL))
+		{
+			return -E_INVAL;
+		}
+
+		// we don't call sys_page_map() to do this since it
+		// have more strict permisson request
+		struct PageInfo* p;
+		pte_t *pte;
+		p = page_lookup(curenv->env_pgdir, srcva, &pte);
+		if (p == NULL)
+		{
+			return -E_INVAL;
+		}
+		if ((perm & PTE_W) && (~(*pte) & PTE_W))
+		{
+			return -E_INVAL;
+		}
+		if ((r = page_insert(e->env_pgdir, p, e->env_ipc_dstva, perm)))
+		{
+			return r;
+		}	
+	}
+	else // now all checks have been passed at this position
+	{
+		e->env_ipc_perm = 0;
+	}
+
+		e->env_ipc_recving = 0;
+		e->env_ipc_from = curenv->env_id;
+		e->env_ipc_value = value;
+		e->env_ipc_perm = perm;
+
+		e->env_status = ENV_RUNNABLE; // again we don't use sys_env_set_status for permission reason
+		e->env_tf.tf_regs.reg_eax = 0; // return 0 for sys_ipc_recv()
+
+		return 0;
+
+	// panic("sys_ipc_try_send not implemented");
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -394,8 +452,19 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
-	return 0;
+	if ((intptr_t)(dstva) < UTOP && (intptr_t)(dstva) % PGSIZE)
+	{
+		return -E_INVAL;
+	}
+	curenv->env_ipc_recving = true;
+	curenv->env_ipc_dstva = dstva;
+
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	sched_yield();
+
+	// panic("sys_ipc_recv not implemented");
+
+	return 0; // the function actually doesn't return here
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -432,6 +501,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_page_unmap(a1, (void *)a2);
 	case SYS_env_set_pgfault_upcall:
 		return sys_env_set_pgfault_upcall(a1, (void *)a2);
+	case SYS_ipc_recv:
+		return sys_ipc_recv((void *)a1);
+	case SYS_ipc_try_send:
+		return sys_ipc_try_send(a1, a2, (void *)a3, a4);
 	default:
 		return -E_INVAL;
 	}
