@@ -23,6 +23,8 @@ struct CpuInfo {
 	volatile unsigned cpu_status;   // The status of the CPU
 	struct Env *cpu_env;            // The currently-running environment.
 	struct Taskstate cpu_ts;        // Used by x86 to find stack for interrupt
+	// interrupts on different CPU share the same address space
+	// seems no effort is made to prevent cpu_ts from crossing page boundary
 };
 
 // Initialized in mpconfig.c
