@@ -107,8 +107,10 @@ spawn(const char *prog, const char **argv)
 	child_tf = envs[ENVX(child)].env_tf;
 	child_tf.tf_eip = elf->e_entry;
 
-	if ((r = init_stack(child, argv, &child_tf.tf_esp)) < 0)
+	uintptr_t tf_esp;
+	if ((r = init_stack(child, argv, &tf_esp)) < 0)
 		return r;
+	child_tf.tf_esp = tf_esp;
 
 	// Set up program segments as defined in ELF header.
 	ph = (struct Proghdr*) (elf_buf + elf->e_phoff);
