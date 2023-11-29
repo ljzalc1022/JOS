@@ -80,7 +80,7 @@ duppage(envid_t envid, unsigned pn)
 	pte_t *pte = PGADDR(PDX(UVPT), pn / (PGSIZE >> 2), (pn % (PGSIZE >> 2)) << 2);
 	void *addr = (void *)(pn * PGSIZE);
 
-	if ((*pte) & (PTE_W | PTE_COW))
+	if (((*pte) & (PTE_W | PTE_COW)) && (~(*pte) & PTE_SHARE))
 	{
 		// writable or copy-on-write page
 		int perm = (((*pte) & PTE_SYSCALL)  & (~PTE_W)) | PTE_COW;
@@ -95,7 +95,7 @@ duppage(envid_t envid, unsigned pn)
 	}
 	else 
 	{
-		// read-only page
+		// read-only page or shared page
 		int perm = (*pte) & PTE_SYSCALL;
 		if ((r = sys_page_map(0, addr, envid, addr, perm)))
 		{
