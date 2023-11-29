@@ -9,6 +9,7 @@
 #include <kern/console.h>
 #include <kern/trap.h>
 #include <kern/picirq.h>
+// PIC: Programmable Interrupt Chip
 
 static void cons_intr(int (*proc)(void));
 static void cons_putc(int c);
