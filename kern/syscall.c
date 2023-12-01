@@ -403,6 +403,7 @@ handle_ipc(struct Env* dst)
 		p = page_lookup(src->env_pgdir, srcva, &pte);
 		if (p == NULL)
 		{
+			// cprintf("handle_ipc: try to send non-existent page %p\n", srcva);
 			r = -E_INVAL;
 			goto ret;
 		}

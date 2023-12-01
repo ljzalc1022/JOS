@@ -300,6 +300,32 @@ serve_sync(envid_t envid, union Fsipc *req)
 	return 0;
 }
 
+int 
+serve_read_map(envid_t envid, struct Fsreq_read_map *req, 
+	void **pg_store, int *perm_store)
+{
+	struct OpenFile *o;
+	char *blk;
+	int r;
+
+	if (req->req_perm & PTE_W)
+		return -E_INVAL;
+	if (req->req_offset % BLKSIZE)
+		return -E_INVAL;
+	int blkno = req->req_offset / BLKSIZE;
+
+	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
+		return r;
+	if ((r = file_get_block(o->o_file, blkno, &blk)) < 0)
+		return r;
+	memcpy(blk, blk, PGSIZE); // load the block from the disk
+
+	*pg_store = blk;
+	*perm_store = req->req_perm;
+
+	return 0;	
+}
+
 typedef int (*fshandler)(envid_t envid, union Fsipc *req);
 
 fshandler handlers[] = {
@@ -337,7 +363,10 @@ serve(void)
 		pg = NULL;
 		if (req == FSREQ_OPEN) {
 			r = serve_open(whom, (struct Fsreq_open*)fsreq, &pg, &perm);
-		} else if (req < ARRAY_SIZE(handlers) && handlers[req]) {
+		} else if (req == FSREQ_READ_MAP) {
+			r = serve_read_map(whom, (struct Fsreq_read_map *)fsreq, &pg, &perm);
+		}
+		else if (req < ARRAY_SIZE(handlers) && handlers[req]) {
 			r = handlers[req](whom, fsreq);
 		} else {
 			cprintf("Invalid request code %d from %08x\n", req, whom);

@@ -59,7 +59,7 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 	r = sys_ipc_try_send(to_env, val, pg, perm);
 	if (r)
 	{
-		panic("ipc_send: %e", r);
+		panic("ipc_send %08x %u %p %d: %e", to_env, val, pg, perm, r);
 	}
 
 	// panic("ipc_send not implemented");

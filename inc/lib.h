@@ -87,6 +87,7 @@ ssize_t	write(int fd, const void *buf, size_t nbytes);
 int	seek(int fd, off_t offset);
 void	close_all(void);
 ssize_t	readn(int fd, void *buf, size_t nbytes);
+int read_map(int fd, void *addr, off_t offset, int perm);
 int	dup(int oldfd, int newfd);
 int	fstat(int fd, struct Stat *statbuf);
 int	stat(const char *path, struct Stat *statbuf);

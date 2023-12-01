@@ -70,7 +70,8 @@ enum {
 	FSREQ_STAT,
 	FSREQ_FLUSH,
 	FSREQ_REMOVE,
-	FSREQ_SYNC
+	FSREQ_SYNC,
+	FSREQ_READ_MAP
 };
 
 union Fsipc {
@@ -108,6 +109,12 @@ union Fsipc {
 	struct Fsreq_remove {
 		char req_path[MAXPATHLEN];
 	} remove;
+
+	struct Fsreq_read_map {
+		int req_fileid;
+		off_t req_offset;
+		int req_perm;
+	} read_map;
 
 	// Ensure Fsipc is one page
 	char _pad[PGSIZE];

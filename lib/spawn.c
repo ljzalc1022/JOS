@@ -285,6 +285,18 @@ map_segment(envid_t child, uintptr_t va, size_t memsz,
 				return r;
 		} else {
 			// from file
+			if (~perm & PTE_W)
+			{
+				// use read_map() to share read-only pages 
+				// between environments
+				if ((r = read_map(fd, UTEMP, fileoffset + i, perm)) < 0)
+					return r;
+				if ((r = sys_page_map(0, UTEMP, child, (void*) (va + i), perm)) < 0)
+					panic("spawn: sys_page_map sharing data: %e", r);
+				sys_page_unmap(0, UTEMP);
+
+				continue;
+			}
 			if ((r = sys_page_alloc(0, UTEMP, PTE_P|PTE_U|PTE_W)) < 0)
 				return r;
 			if ((r = seek(fd, fileoffset + i)) < 0)

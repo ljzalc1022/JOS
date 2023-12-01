@@ -34,6 +34,8 @@ static ssize_t devfile_write(struct Fd *fd, const void *buf, size_t n);
 static int devfile_stat(struct Fd *fd, struct Stat *stat);
 static int devfile_trunc(struct Fd *fd, off_t newsize);
 
+static int devfile_read_map(struct Fd *fd, void *addr, off_t offset, int perm);
+
 struct Dev devfile =
 {
 	.dev_id =	'f',
@@ -42,7 +44,9 @@ struct Dev devfile =
 	.dev_close =	devfile_flush,
 	.dev_stat =	devfile_stat,
 	.dev_write =	devfile_write,
-	.dev_trunc =	devfile_trunc
+	.dev_trunc =	devfile_trunc,
+
+	.dev_read_map = devfile_read_map
 };
 
 // Open a file (or directory).
@@ -124,6 +128,20 @@ devfile_read(struct Fd *fd, void *buf, size_t n)
 	assert(r <= n);
 	assert(r <= PGSIZE);
 	memmove(buf, fsipcbuf.readRet.ret_buf, r);
+	return r;
+}
+
+static int 
+devfile_read_map(struct Fd *fd, void *addr, off_t offset, int perm)
+{
+	int r;
+
+	fsipcbuf.read_map.req_fileid = fd->fd_file.id;
+	fsipcbuf.read_map.req_offset = offset;
+	fsipcbuf.read_map.req_perm = perm;
+	if ((r = fsipc(FSREQ_READ_MAP, addr)) < 0)
+		return r;
+
 	return r;
 }
 
