@@ -12,7 +12,7 @@ ifeq ($(V),1)
 override V =
 endif
 ifeq ($(V),0)
-override V = @
+override V = @  # @ at the beginning of a command suppresses it from being printed out in make
 endif
 
 -include conf/lab.mk
